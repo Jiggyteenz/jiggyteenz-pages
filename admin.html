@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jiggy Teenz · Admin</title>
+<style>
+:root{
+  --black:#0d0d12; --panel:#fff; --bg:#f6f7f9; --line:#e6e8ec;
+  --ink:#0d0d12; --ink2:#5b5f6b; --ink3:#9aa0ad;
+  --lime:#b8dc26; --limeDark:#7d9a0d; --green:#16a34a;
+  --orange:#f97316; --red:#e11d48; --blue:#0ea5e9; --purple:#7c3aed;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:15px}
+button{font:inherit;cursor:pointer;border:none}
+input,select,textarea{font:inherit;width:100%;padding:11px 13px;border:1.5px solid var(--line);
+  border-radius:11px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--lime)}
+label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin:12px 0 5px;letter-spacing:.3px}
+a{color:var(--limeDark)}
+
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+#login .box{background:#fff;border:1px solid var(--line);border-radius:22px;padding:34px 30px;width:100%;max-width:400px;
+  box-shadow:0 18px 50px rgba(13,13,18,.08)}
+.logo{font-size:26px;font-weight:900;letter-spacing:-.6px}
+.logo span{color:var(--lime)}
+
+/* shell */
+#app{display:none}
+header{background:var(--black);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:20;flex-wrap:wrap}
+header .logo{font-size:20px;color:#fff}
+header .who{margin-left:auto;font-size:12.5px;color:#9aa0ad}
+nav{background:#fff;border-bottom:1px solid var(--line);padding:0 12px;display:flex;gap:4px;overflow-x:auto;
+  position:sticky;top:52px;z-index:19}
+nav button{background:none;padding:14px 14px;font-size:13.5px;font-weight:700;color:var(--ink2);
+  border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{color:var(--ink);border-bottom-color:var(--lime)}
+main{padding:22px;max-width:1180px;margin:0 auto}
+h1{font-size:22px;margin-bottom:4px}
+.sub{color:var(--ink2);font-size:13.5px;margin-bottom:18px}
+
+/* pieces */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px}
+.stat b{display:block;font-size:30px;line-height:1.1}
+.stat span{font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px}
+.btn{background:var(--lime);color:var(--black);font-weight:800;padding:11px 18px;border-radius:999px;font-size:13.5px}
+.btn:hover{background:#c9f318}
+.btn.ghost{background:#fff;border:1.6px solid var(--line);color:var(--ink)}
+.btn.dark{background:var(--black);color:#fff}
+.btn.danger{background:#fff;border:1.6px solid var(--red);color:var(--red)}
+.btn.sm{padding:7px 13px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);
+  padding:10px 8px;border-bottom:1px solid var(--line)}
+td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800}
+.pill.ok{background:#ecfdf5;color:var(--green)}
+.pill.warn{background:#fffbeb;color:#b45309}
+.pill.off{background:#f1f5f9;color:var(--ink3)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.right{margin-left:auto}
+.msg{padding:12px 14px;border-radius:12px;font-size:13.5px;margin-bottom:14px;display:none}
+.msg.show{display:block}
+.msg.ok{background:#ecfdf5;color:#166534}
+.msg.err{background:#fef2f2;color:#991b1b}
+.empty{text-align:center;color:var(--ink3);padding:30px 10px;font-size:14px}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;letter-spacing:2px;
+  background:var(--black);color:var(--lime);padding:8px 14px;border-radius:10px;display:inline-block}
+details{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:#fff}
+summary{cursor:pointer;font-weight:700;font-size:14px}
+.small{font-size:12px;color:var(--ink2)}
+.hide{display:none}
+@media(max-width:600px){main{padding:14px}.stat b{font-size:24px}}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login">
+  <div class="box">
+    <div class="logo">JIGGY<span>TEENZ</span></div>
+    <div class="sub" style="margin-top:6px">Staff dashboard</div>
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" placeholder="you@jiggyteenz.co.uk">
+    <label>Password</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+    <div id="loginMsg" class="msg err" style="margin-top:14px"></div>
+    <button class="btn" id="loginBtn" style="width:100%;margin-top:16px">SIGN IN</button>
+    <p class="small" style="margin-top:14px">Use the same login as your Jiggy Teenz app account.
+      Only accounts marked as staff can get in.</p>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <header>
+    <div class="logo">JIGGY<span>TEENZ</span></div>
+    <span class="small" style="color:#9aa0ad">Staff dashboard</span>
+    <div class="who"><span id="whoami"></span> &nbsp;
+      <button class="btn sm ghost" id="logoutBtn">Log out</button></div>
+  </header>
+
+  <nav>
+    <button data-tab="overview" class="on">Overview</button>
+    <button data-tab="sessions">Sessions</button>
+    <button data-tab="register">Register</button>
+    <button data-tab="members">Members</button>
+    <button data-tab="shop">Shop</button>
+    <button data-tab="orders">Orders</button>
+    <button data-tab="support">Support</button>
+    <button data-tab="team">Team</button>
+    <button data-tab="export">Export</button>
+  </nav>
+
+  <main>
+    <div id="msg" class="msg"></div>
+
+    <!-- OVERVIEW -->
+    <section id="tab-overview">
+      <h1>Overview</h1>
+      <p class="sub">How the club is doing right now.</p>
+      <div class="grid g4" id="stats"></div>
+      <div class="card">
+        <h1 style="font-size:17px">Today &amp; tomorrow</h1>
+        <p class="sub" style="margin-bottom:12px">Sessions coming up, with today's check-in code.</p>
+        <div id="upcoming"></div>
+      </div>
+    </section>
+
+    <!-- SESSIONS -->
+    <section id="tab-sessions" class="hide">
+      <h1>Sessions</h1>
+      <p class="sub">Your timetable. The check-in code is what members type to earn their coins.</p>
+
+      <div class="card">
+        <h1 style="font-size:17px" id="sessFormTitle">Add a session</h1>
+        <div class="grid g2" style="margin-top:6px">
+          <div><label>Title</label><input id="sTitle" placeholder="Strength &amp; Conditioning"></div>
+          <div><label>Emoji</label><input id="sEmoji" value="🏋️" maxlength="4"></div>
+          <div><label>Coach</label><input id="sCoach" placeholder="Coach Dan"></div>
+          <div><label>Date &amp; time</label><input id="sWhen" type="datetime-local"></div>
+          <div><label>Length (minutes)</label><input id="sMins" type="number" value="60" min="15" max="240"></div>
+          <div><label>Spaces</label><input id="sSpots" type="number" value="16" min="1" max="200"></div>
+          <div><label>Check-in code (4–6 digits)</label><input id="sCode" placeholder="2468" maxlength="6"></div>
+          <div><label>Status</label>
+            <select id="sActive"><option value="true">Active</option><option value="false">Hidden</option></select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn" id="saveSession">SAVE SESSION</button>
+          <button class="btn ghost hide" id="cancelEdit">Cancel</button>
+          <span class="small right">Tip: use a different code each day so old codes can't be reused.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <table><thead><tr>
+          <th>Session</th><th>When</th><th>Code</th><th>Booked</th><th>Status</th><th></th>
+        </tr></thead><tbody id="sessionRows"></tbody></table>
+        <div id="sessionsEmpty" class="empty hide">No sessions yet — add your first one above.</div>
+      </div>
+    </section>
+
+    <!-- REGISTER -->
+    <section id="tab-register" class="hide">
+      <h1>Register</h1>
+      <p class="sub">Pick a session, then tick members off as they arrive. Coins are awarded automatically.</p>
+      <div class="card">
+        <label>Session</label>
+        <select id="regSession"></select>
+      </div>
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <b id="regCount">—</b>
+          <span class="right small" id="regCode"></span>
+        </div>
+        <table><thead><tr><th>Member</th><th>Guardian</th><th>Safety</th><th>Present</th></tr></thead>
+          <tbody id="regRows"></tbody></table>
+        <div id="regEmpty" class="empty hide">Nobody has booked this session yet.</div>
+      </div>
+      <div class="card">
+        <h1 style="font-size:16px">Waiting list</h1>
+        <p class="sub" style="margin-bottom:10px">Members hoping for a space if someone drops out.</p>
+        <div id="waitRows"></div>
+      </div>
+      <div class="card">
+        <h1 style="font-size:16px">Session materials</h1>
+        <p class="sub" style="margin-bottom:10px">Files here are visible only to members booked on this session.
+          Max 10&nbsp;MB. PDF, images, video, Word or PowerPoint.</p>
+        <div class="row">
+          <input type="file" id="matFile" style="max-width:340px">
+          <input id="matTitle" placeholder="What is it? e.g. Warm-up plan" style="max-width:280px">
+          <button class="btn sm" id="uploadMat">UPLOAD</button>
+        </div>
+        <div id="matRows" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- MEMBERS -->
+    <section id="tab-members" class="hide">
+      <h1>Members</h1>
+      <p class="sub">Everyone signed up. Safety notes are shown to coaches only.</p>
+      <div class="card">
+        <input id="memberSearch" placeholder="Search by name or email…" style="max-width:340px">
+      </div>
+      <div class="card">
+        <table><thead><tr>
+          <th>Member</th><th>Age</th><th>Guardian</th><th>Coins</th><th>Streak</th><th>Pass</th><th>Joined</th>
+        </tr></thead><tbody id="memberRows"></tbody></table>
+        <div id="membersEmpty" class="empty hide">No members yet.</div>
+      </div>
+    </section>
+
+    <!-- SHOP -->
+    <section id="tab-shop" class="hide">
+      <h1>Shop</h1>
+      <p class="sub">Set your own prices and switch items on or off. 10 JC = £1.00.</p>
+      <div class="card">
+        <table><thead><tr>
+          <th>Item</th><th>Type</th><th>Price (JC)</th><th>= £</th><th>Available</th><th></th>
+        </tr></thead><tbody id="shopRows"></tbody></table>
+      </div>
+      <div class="card">
+        <h1 style="font-size:17px">Add an item</h1>
+        <div class="grid g2" style="margin-top:6px">
+          <div><label>Name</label><input id="iTitle" placeholder="JT Joggers"></div>
+          <div><label>Emoji</label><input id="iEmoji" value="🎁" maxlength="4"></div>
+          <div><label>Price in JC</label><input id="iCost" type="number" value="150" min="0"></div>
+          <div><label>Type</label>
+            <select id="iKind">
+              <option value="merch">Merch (buyable)</option>
+              <option value="perk">Perk (earn only)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" id="addItem" style="margin-top:16px">ADD ITEM</button>
+      </div>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="tab-orders" class="hide">
+      <h1>Orders</h1>
+      <p class="sub">What members have bought. Mark as collected once handed over.</p>
+      <div class="card">
+        <table><thead><tr>
+          <th>Code</th><th>Item</th><th>Member</th><th>Paid with</th><th>When</th><th>Status</th><th></th>
+        </tr></thead><tbody id="orderRows"></tbody></table>
+        <div id="ordersEmpty" class="empty hide">No orders yet.</div>
+      </div>
+    </section>
+
+    <!-- SUPPORT -->
+    <section id="tab-support" class="hide">
+      <h1>Support inbox</h1>
+      <p class="sub">Messages from members. Reply by email, then mark as done.</p>
+      <div id="supportList"></div>
+      <div id="supportEmpty" class="empty hide">No messages. All quiet 👌</div>
+    </section>
+
+    <!-- TEAM -->
+    <section id="tab-team" class="hide">
+      <h1>Team</h1>
+      <p class="sub">Who can get into this dashboard. Admins can manage everything; coaches can run
+        sessions and take the register but can't change roles.</p>
+
+      <div class="card">
+        <h1 style="font-size:17px">Add a staff member</h1>
+        <p class="sub" style="margin-bottom:6px">They'll get an email with a temporary password.
+          If they already have a Jiggy Teenz account, we'll just upgrade it.</p>
+        <div class="grid g2">
+          <div><label>Their name</label><input id="tName" placeholder="Coach Amara"></div>
+          <div><label>Their email</label><input id="tEmail" type="email" placeholder="amara@jiggyteenz.co.uk"></div>
+          <div><label>Role</label>
+            <select id="tRole">
+              <option value="coach">Coach — sessions &amp; register</option>
+              <option value="admin">Admin — full access</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" id="inviteBtn" style="margin-top:16px">SEND INVITE</button>
+      </div>
+
+      <div class="card">
+        <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Since</th><th></th></tr></thead>
+          <tbody id="teamRows"></tbody></table>
+        <div id="teamEmpty" class="empty hide">No staff yet.</div>
+      </div>
+    </section>
+
+    <!-- EXPORT -->
+    <section id="tab-export" class="hide">
+      <h1>Export</h1>
+      <p class="sub">Download your records as spreadsheet files (CSV — opens in Excel).</p>
+      <div class="grid g2">
+        <div class="card"><b>Attendance register</b>
+          <p class="small" style="margin:8px 0 14px">Every check-in with member, session and date.</p>
+          <button class="btn" data-export="attendance">DOWNLOAD</button></div>
+        <div class="card"><b>Members list</b>
+          <p class="small" style="margin:8px 0 14px">Names, emails, guardians, coins and streaks.</p>
+          <button class="btn" data-export="members">DOWNLOAD</button></div>
+        <div class="card"><b>Orders</b>
+          <p class="small" style="margin:8px 0 14px">Merch and perks bought, with collection codes.</p>
+          <button class="btn" data-export="orders">DOWNLOAD</button></div>
+        <div class="card"><b>Passes sold</b>
+          <p class="small" style="margin:8px 0 14px">Weekly passes with how they were paid for.</p>
+          <button class="btn" data-export="passes">DOWNLOAD</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://ljxtehkhkdpuoatsqvzl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqeHRlaGtoa2RwdW9hdHNxdnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTA2ODYsImV4cCI6MjEwMjI4NjY4Nn0.uhFJQTiPPCNLOhdILRAKcFTkfOo94IWTKNMVVB8scu4';
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const gbp = (jc) => '£' + (Number(jc || 0) / 10).toFixed(2);
+const dt = (s) => new Date(s).toLocaleString('en-GB',
+  { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+const d8 = (s) => new Date(s).toLocaleDateString('en-GB');
+
+let ME = null, SESSIONS = [], MEMBERS = [], EDIT_ID = null;
+
+function say(text, ok = true) {
+  const m = $('msg');
+  m.textContent = text;
+  m.className = 'msg show ' + (ok ? 'ok' : 'err');
+  clearTimeout(say._t);
+  say._t = setTimeout(() => { m.className = 'msg'; }, 5000);
+}
+
+/* ---------------- auth ---------------- */
+$('loginBtn').onclick = async () => {
+  const em = $('email').value.trim(), pw = $('password').value;
+  const box = $('loginMsg');
+  box.className = 'msg err';
+  const { error } = await sb.auth.signInWithPassword({ email: em, password: pw });
+  if (error) { box.textContent = 'Email or password not recognised.'; box.className = 'msg err show'; return; }
+  boot();
+};
+$('password').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+$('logoutBtn').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data: me } = await sb.from('profiles')
+    .select('id,name,is_admin,is_coach').eq('id', session.user.id).maybeSingle();
+
+  if (!me || (!me.is_admin && !me.is_coach)) {
+    const box = $('loginMsg');
+    box.textContent = 'That account is not marked as staff. Ask an admin to add you.';
+    box.className = 'msg err show';
+    await sb.auth.signOut();
+    return;
+  }
+  ME = me;
+  $('whoami').textContent = me.name + (me.is_admin ? ' · admin' : ' · coach');
+  $('login').style.display = 'none';
+  $('app').style.display = 'block';
+  loadOverview(); loadSessions(); loadMembers(); loadShop(); loadOrders(); loadSupport(); loadTeam();
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('nav button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('main section').forEach(s => s.classList.add('hide'));
+    $('tab-' + b.dataset.tab).classList.remove('hide');
+  };
+});
+
+/* ---------------- overview ---------------- */
+async function loadOverview() {
+  const { data } = await sb.rpc('staff_overview');
+  if (!data || !data.ok) return;
+  const cards = [
+    ['Members', data.members, 'var(--ink)'],
+    ['Guardian approved', data.approved, 'var(--green)'],
+    ['Awaiting guardian', data.awaiting_guardian, 'var(--orange)'],
+    ['Active passes', data.active_passes, 'var(--purple)'],
+    ['Check-ins (7 days)', data.attendance_week, 'var(--blue)'],
+    ['Open support', data.open_support, 'var(--red)'],
+    ['Orders to hand out', data.orders_pending, 'var(--ink)'],
+    ['Coins in circulation', data.coins_in_circulation, 'var(--limeDark)'],
+  ];
+  $('stats').innerHTML = cards.map(([l, v, c]) =>
+    `<div class="stat"><b style="color:${c}">${v ?? 0}</b><span>${l}</span></div>`).join('');
+}
+
+/* ---------------- sessions ---------------- */
+async function loadSessions() {
+  const { data: ses } = await sb.from('sessions').select('*').order('starts_at', { ascending: false });
+  SESSIONS = ses || [];
+  const { data: bk } = await sb.from('bookings').select('session_id');
+  const counts = {};
+  (bk || []).forEach(b => counts[b.session_id] = (counts[b.session_id] || 0) + 1);
+
+  $('sessionRows').innerHTML = SESSIONS.map(s => `
+    <tr>
+      <td><b>${esc(s.emoji || '')} ${esc(s.title)}</b><br><span class="small">${esc(s.coach || '')}</span></td>
+      <td>${dt(s.starts_at)}<br><span class="small">${s.duration_min} min</span></td>
+      <td><span class="code">${esc(s.checkin_code || '—')}</span></td>
+      <td>${counts[s.id] || 0} / ${s.spots}</td>
+      <td>${s.active ? '<span class="pill ok">Active</span>' : '<span class="pill off">Hidden</span>'}</td>
+      <td class="row">
+        <button class="btn sm ghost" data-edit="${s.id}">Edit</button>
+        <button class="btn sm ghost" data-toggle="${s.id}">${s.active ? 'Hide' : 'Show'}</button>
+      </td>
+    </tr>`).join('');
+  $('sessionsEmpty').classList.toggle('hide', SESSIONS.length > 0);
+
+  const soon = SESSIONS.filter(s => s.active && new Date(s.starts_at) > Date.now() - 6 * 3600e3)
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)).slice(0, 5);
+  $('upcoming').innerHTML = soon.length ? soon.map(s => `
+    <div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)">
+      <div><b>${esc(s.emoji || '')} ${esc(s.title)}</b><br><span class="small">${dt(s.starts_at)} · ${esc(s.coach || '')}</span></div>
+      <div class="right"><span class="code">${esc(s.checkin_code || '—')}</span>
+        <span class="small"> ${counts[s.id] || 0}/${s.spots} booked</span></div>
+    </div>`).join('') : '<div class="empty">Nothing coming up — add a session.</div>';
+
+  const sel = $('regSession');
+  const keep = sel.value;
+  sel.innerHTML = SESSIONS.map(s =>
+    `<option value="${s.id}">${esc(s.title)} — ${dt(s.starts_at)}</option>`).join('');
+  if (keep) sel.value = keep;
+  loadRegister();
+
+  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editSession(b.dataset.edit));
+  document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = async () => {
+    const s = SESSIONS.find(x => x.id === b.dataset.toggle);
+    await sb.from('sessions').update({ active: !s.active }).eq('id', s.id);
+    say(s.active ? 'Session hidden from members.' : 'Session is live.');
+    loadSessions();
+  });
+}
+
+function editSession(id) {
+  const s = SESSIONS.find(x => x.id === id);
+  if (!s) return;
+  EDIT_ID = id;
+  $('sessFormTitle').textContent = 'Edit session';
+  $('sTitle').value = s.title; $('sEmoji').value = s.emoji || '';
+  $('sCoach').value = s.coach || '';
+  const d = new Date(s.starts_at); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  $('sWhen').value = d.toISOString().slice(0, 16);
+  $('sMins').value = s.duration_min; $('sSpots').value = s.spots;
+  $('sCode').value = s.checkin_code || ''; $('sActive').value = String(s.active);
+  $('cancelEdit').classList.remove('hide');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('cancelEdit').onclick = () => {
+  EDIT_ID = null;
+  $('sessFormTitle').textContent = 'Add a session';
+  ['sTitle','sCoach','sWhen','sCode'].forEach(i => $(i).value = '');
+  $('cancelEdit').classList.add('hide');
+};
+
+$('saveSession').onclick = async () => {
+  const title = $('sTitle').value.trim();
+  const when = $('sWhen').value;
+  const code = $('sCode').value.replace(/[^0-9A-Za-z]/g, '').slice(0, 6);
+  if (!title) return say('Give the session a title.', false);
+  if (!when) return say('Pick a date and time.', false);
+  if (code.length < 4) return say('Check-in code needs at least 4 characters.', false);
+
+  const row = {
+    title, emoji: $('sEmoji').value.trim() || '🏋️',
+    coach: $('sCoach').value.trim(),
+    starts_at: new Date(when).toISOString(),
+    duration_min: Math.max(15, Math.min(240, +$('sMins').value || 60)),
+    spots: Math.max(1, Math.min(200, +$('sSpots').value || 16)),
+    checkin_code: code,
+    active: $('sActive').value === 'true',
+  };
+  const { error } = EDIT_ID
+    ? await sb.from('sessions').update(row).eq('id', EDIT_ID)
+    : await sb.from('sessions').insert(row);
+  if (error) return say(error.message, false);
+  say(EDIT_ID ? 'Session updated.' : 'Session added.');
+  $('cancelEdit').click();
+  loadSessions(); loadOverview();
+};
+
+/* ---------------- register ---------------- */
+$('regSession').onchange = loadRegister;
+async function loadRegister() {
+  const id = $('regSession').value;
+  if (!id) return;
+  const s = SESSIONS.find(x => x.id === id);
+  $('regCode').innerHTML = s ? `Check-in code: <span class="code">${esc(s.checkin_code || '—')}</span>` : '';
+
+  const [{ data: bk }, { data: att }, { data: wl }] = await Promise.all([
+    sb.from('bookings').select('user_id').eq('session_id', id),
+    sb.from('attendance').select('user_id').eq('session_id', id),
+    sb.from('waitlist').select('user_id').eq('session_id', id),
+  ]);
+  const present = new Set((att || []).map(a => a.user_id));
+  const ids = (bk || []).map(b => b.user_id);
+  const rows = MEMBERS.filter(m => ids.includes(m.id));
+
+  $('regCount').textContent = `${present.size} of ${rows.length} present`;
+  $('regRows').innerHTML = rows.map(m => `
+    <tr>
+      <td><b>${esc(m.name || '—')}</b><br><span class="small">${esc(m.email || '')}</span></td>
+      <td class="small">${m.parent_approved ? '<span class="pill ok">Approved</span>' : '<span class="pill warn">Pending</span>'}</td>
+      <td class="small">${m.medical_notes ? '⚠️ ' + esc(m.medical_notes.slice(0, 60)) : '—'}
+        ${m.emergency_phone ? '<br>📞 ' + esc(m.emergency_phone) : ''}</td>
+      <td><button class="btn sm ${present.has(m.id) ? 'ghost' : ''}" data-att="${m.id}">
+        ${present.has(m.id) ? '✓ Present' : 'Mark present'}</button></td>
+    </tr>`).join('');
+  $('regEmpty').classList.toggle('hide', rows.length > 0);
+
+  document.querySelectorAll('[data-att]').forEach(b => b.onclick = async () => {
+    const uid = b.dataset.att;
+    const fn = present.has(uid) ? 'staff_unmark_attendance' : 'staff_mark_attendance';
+    const { data, error } = await sb.rpc(fn, { p_user_id: uid, p_session_id: id });
+    if (error) return say(error.message, false);
+    say(present.has(uid) ? 'Check-in removed.' : `Marked present · +${data.awarded} JC awarded`);
+    loadRegister(); loadOverview();
+  });
+
+  const wIds = (wl || []).map(w => w.user_id);
+  const wRows = MEMBERS.filter(m => wIds.includes(m.id));
+  $('waitRows').innerHTML = wRows.length
+    ? wRows.map(m => `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <b>${esc(m.name)}</b><span class="small right">${esc(m.email || '')}</span></div>`).join('')
+    : '<div class="small">Nobody waiting.</div>';
+
+  loadMaterials(id);
+}
+
+/* ---------------- materials ---------------- */
+async function loadMaterials(sessionId) {
+  const { data } = await sb.from('session_materials').select('*')
+    .eq('session_id', sessionId).order('created_at', { ascending: false });
+  $('matRows').innerHTML = (data || []).length ? (data || []).map(m => `
+    <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+      <span>📎 <b>${esc(m.title)}</b> <span class="small">${Math.round((m.size_bytes || 0) / 1024)} KB</span></span>
+      <button class="btn sm danger right" data-delmat="${m.id}" data-path="${esc(m.file_path)}">Remove</button>
+    </div>`).join('') : '<div class="small">No files for this session yet.</div>';
+
+  document.querySelectorAll('[data-delmat]').forEach(b => b.onclick = async () => {
+    await sb.storage.from('session-materials').remove([b.dataset.path]);
+    await sb.from('session_materials').delete().eq('id', b.dataset.delmat);
+    say('File removed.');
+    loadMaterials(sessionId);
+  });
+}
+
+$('uploadMat').onclick = async () => {
+  const id = $('regSession').value;
+  const file = $('matFile').files[0];
+  const title = $('matTitle').value.trim() || (file && file.name) || 'Session file';
+  if (!id) return say('Pick a session first.', false);
+  if (!file) return say('Choose a file to upload.', false);
+  if (file.size > 10 * 1024 * 1024) return say('That file is over 10 MB — please use a smaller one.', false);
+
+  const okTypes = ['application/pdf','image/png','image/jpeg','image/webp','video/mp4','text/plain',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+  if (file.type && !okTypes.includes(file.type))
+    return say('That file type is not allowed. Use PDF, image, MP4, Word or PowerPoint.', false);
+
+  const safe = file.name.replace(/[^A-Za-z0-9._-]/g, '_').slice(-60);
+  const path = `${id}/${Date.now()}_${safe}`;
+  const { error: upErr } = await sb.storage.from('session-materials')
+    .upload(path, file, { contentType: file.type || 'application/octet-stream' });
+  if (upErr) return say('Upload failed: ' + upErr.message, false);
+
+  const { error } = await sb.from('session_materials').insert({
+    session_id: id, title: title.slice(0, 120), file_path: path,
+    mime_type: file.type, size_bytes: file.size,
+  });
+  if (error) return say(error.message, false);
+  say('File uploaded — booked members can see it now.');
+  $('matFile').value = ''; $('matTitle').value = '';
+  loadMaterials(id);
+};
+
+/* ---------------- members ---------------- */
+async function loadMembers() {
+  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+  MEMBERS = data || [];
+  const { data: passes } = await sb.from('passes').select('user_id,sessions_used,sessions_total,week_start');
+  const pmap = {};
+  (passes || []).forEach(p => { pmap[p.user_id] = p; });
+  renderMembers(pmap);
+  $('memberSearch').oninput = () => renderMembers(pmap);
+}
+
+function renderMembers(pmap) {
+  const q = ($('memberSearch').value || '').toLowerCase();
+  const rows = MEMBERS.filter(m =>
+    !q || (m.name || '').toLowerCase().includes(q) || (m.parent_email || '').toLowerCase().includes(q));
+  $('memberRows').innerHTML = rows.map(m => {
+    const p = pmap[m.id];
+    return `<tr>
+      <td><b>${esc(m.name || '—')}</b> ${m.is_admin ? '<span class="pill ok">admin</span>' : m.is_coach ? '<span class="pill ok">coach</span>' : ''}
+        <br><span class="small">${esc(m.avatar_emoji || '')} ${esc(m.title_badge || '')}</span></td>
+      <td>${m.age ?? '—'}</td>
+      <td class="small">${esc(m.parent_email || '—')}<br>
+        ${m.parent_approved ? '<span class="pill ok">Approved</span>' : '<span class="pill warn">Pending</span>'}</td>
+      <td><b>${m.coins ?? 0}</b><br><span class="small">${gbp(m.coins)}</span></td>
+      <td>${m.streak ?? 0}</td>
+      <td class="small">${p ? `${p.sessions_total - p.sessions_used} left` : '—'}</td>
+      <td class="small">${m.created_at ? d8(m.created_at) : '—'}</td>
+    </tr>`;
+  }).join('');
+  $('membersEmpty').classList.toggle('hide', rows.length > 0);
+}
+
+/* ---------------- shop ---------------- */
+async function loadShop() {
+  const { data } = await sb.from('shop_items').select('*').order('sort');
+  $('shopRows').innerHTML = (data || []).map(i => `
+    <tr>
+      <td><b>${esc(i.emoji || '')} ${esc(i.title)}</b></td>
+      <td class="small">${i.kind === 'merch' ? 'Merch' : 'Perk'}</td>
+      <td><input type="number" value="${i.cost_jc}" min="0" data-price="${i.id}" style="width:110px"></td>
+      <td class="small" data-gbp="${i.id}">${gbp(i.cost_jc)}</td>
+      <td>${i.active ? '<span class="pill ok">On sale</span>' : '<span class="pill off">Hidden</span>'}</td>
+      <td class="row">
+        <button class="btn sm" data-save="${i.id}">Save</button>
+        <button class="btn sm ghost" data-onoff="${i.id}">${i.active ? 'Hide' : 'Show'}</button>
+      </td>
+    </tr>`).join('');
+
+  document.querySelectorAll('[data-price]').forEach(inp => inp.oninput = () => {
+    const c = document.querySelector(`[data-gbp="${inp.dataset.price}"]`);
+    if (c) c.textContent = gbp(inp.value);
+  });
+  document.querySelectorAll('[data-save]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.save;
+    const val = Math.max(0, +document.querySelector(`[data-price="${id}"]`).value || 0);
+    const { error } = await sb.from('shop_items').update({ cost_jc: val }).eq('id', id);
+    say(error ? error.message : `Price updated to ${val} JC (${gbp(val)}).`, !error);
+    loadShop();
+  });
+  document.querySelectorAll('[data-onoff]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.onoff;
+    const item = (data || []).find(x => x.id === id);
+    await sb.from('shop_items').update({ active: !item.active }).eq('id', id);
+    say(item.active ? 'Item hidden from members.' : 'Item is on sale.');
+    loadShop();
+  });
+}
+
+$('addItem').onclick = async () => {
+  const title = $('iTitle').value.trim();
+  if (!title) return say('Give the item a name.', false);
+  const { error } = await sb.from('shop_items').insert({
+    title, emoji: $('iEmoji').value.trim() || '🎁',
+    cost_jc: Math.max(0, +$('iCost').value || 0),
+    kind: $('iKind').value, active: true, sort: 100,
+  });
+  if (error) return say(error.message, false);
+  say('Item added.');
+  $('iTitle').value = '';
+  loadShop();
+};
+
+/* ---------------- orders ---------------- */
+async function loadOrders() {
+  const { data } = await sb.from('orders')
+    .select('*, shop_items(title,emoji)').order('created_at', { ascending: false }).limit(200);
+  $('orderRows').innerHTML = (data || []).map(o => {
+    const m = MEMBERS.find(x => x.id === o.user_id);
+    return `<tr>
+      <td><span class="code">${esc(o.code)}</span></td>
+      <td>${esc(o.shop_items?.emoji || '')} ${esc(o.shop_items?.title || 'Item')}</td>
+      <td class="small">${esc(m?.name || '—')}</td>
+      <td class="small">${o.paid_with === 'coins' ? '🪙 Coins' : '💳 Card'} · ${gbp((o.amount_pence || 0) / 10)}</td>
+      <td class="small">${d8(o.created_at)}</td>
+      <td>${o.status === 'collected'
+        ? '<span class="pill ok">Collected</span>' : '<span class="pill warn">To hand out</span>'}</td>
+      <td>${o.status === 'collected' ? '' :
+        `<button class="btn sm" data-collect="${o.id}">Mark collected</button>`}</td>
+    </tr>`;
+  }).join('');
+  $('ordersEmpty').classList.toggle('hide', (data || []).length > 0);
+
+  document.querySelectorAll('[data-collect]').forEach(b => b.onclick = async () => {
+    await sb.from('orders').update({ status: 'collected' }).eq('id', b.dataset.collect);
+    say('Marked as collected.');
+    loadOrders(); loadOverview();
+  });
+}
+
+/* ---------------- support ---------------- */
+async function loadSupport() {
+  const { data } = await sb.from('support_messages').select('*')
+    .order('created_at', { ascending: false }).limit(100);
+  $('supportList').innerHTML = (data || []).map(s => {
+    const m = MEMBERS.find(x => x.id === s.user_id);
+    return `<details ${s.status === 'open' ? 'open' : ''}>
+      <summary>${s.status === 'open' ? '🔴' : '✅'} ${esc(s.topic)} — ${esc(m?.name || 'Member')}
+        <span class="small"> · ${d8(s.created_at)}</span></summary>
+      <p style="margin:12px 0;line-height:1.55">${esc(s.body)}</p>
+      <div class="row">
+        ${m?.parent_email ? `<a class="btn sm ghost" href="mailto:${esc(m.parent_email)}?subject=Jiggy%20Teenz%20support">Email guardian</a>` : ''}
+        ${s.status === 'open' ? `<button class="btn sm" data-done="${s.id}">Mark done</button>` : ''}
+      </div>
+    </details>`;
+  }).join('');
+  $('supportEmpty').classList.toggle('hide', (data || []).length > 0);
+
+  document.querySelectorAll('[data-done]').forEach(b => b.onclick = async () => {
+    await sb.from('support_messages').update({ status: 'done' }).eq('id', b.dataset.done);
+    say('Marked as done.');
+    loadSupport(); loadOverview();
+  });
+}
+
+
+/* ---------------- team ---------------- */
+async function loadTeam() {
+  const { data } = await sb.rpc('staff_team');
+  if (!data || !data.ok) return;
+  const team = data.team || [];
+  $('teamRows').innerHTML = team.map(t => `
+    <tr>
+      <td><b>${esc(t.name || '—')}</b></td>
+      <td class="small">${esc(t.email || '')}</td>
+      <td>${t.is_admin ? '<span class="pill ok">Admin</span>' : '<span class="pill warn">Coach</span>'}</td>
+      <td class="small">${t.created_at ? d8(t.created_at) : '—'}</td>
+      <td class="row">
+        ${ME.is_admin ? `
+          <select data-role="${t.id}" style="width:auto;padding:6px 10px">
+            <option value="admin" ${t.is_admin ? 'selected' : ''}>Admin</option>
+            <option value="coach" ${t.is_coach && !t.is_admin ? 'selected' : ''}>Coach</option>
+            <option value="none">Remove access</option>
+          </select>` : ''}
+      </td>
+    </tr>`).join('');
+  $('teamEmpty').classList.toggle('hide', team.length > 0);
+
+  document.querySelectorAll('[data-role]').forEach(sel => sel.onchange = async () => {
+    const { data: r, error } = await sb.rpc('set_staff_role',
+      { p_user_id: sel.dataset.role, p_role: sel.value });
+    if (error) return say(error.message, false);
+    if (!r.ok) { say(r.message, false); return loadTeam(); }
+    say('Role updated.');
+    loadTeam();
+  });
+}
+
+$('inviteBtn').onclick = async () => {
+  const name = $('tName').value.trim();
+  const email = $('tEmail').value.trim();
+  const role = $('tRole').value;
+  if (!name) return say('Give them a name.', false);
+  if (!/^\S+@\S+\.\S+$/.test(email)) return say('That email does not look right.', false);
+
+  $('inviteBtn').disabled = true;
+  $('inviteBtn').textContent = 'SENDING…';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/staff-invite', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, role }),
+    });
+    const j = await res.json();
+    say(j.ok ? (j.message || 'Invite sent.') : (j.error || 'Could not send invite.'), !!j.ok);
+    if (j.ok) { $('tName').value = ''; $('tEmail').value = ''; loadTeam(); }
+  } catch (e) {
+    say('Could not reach the server.', false);
+  }
+  $('inviteBtn').disabled = false;
+  $('inviteBtn').textContent = 'SEND INVITE';
+};
+
+/* ---------------- export ---------------- */
+function toCSV(rows) {
+  if (!rows.length) return '';
+  const cols = Object.keys(rows[0]);
+  const cell = (v) => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  return [cols.join(','), ...rows.map(r => cols.map(c => cell(r[c])).join(','))].join('\n');
+}
+function download(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.querySelectorAll('[data-export]').forEach(b => b.onclick = async () => {
+  const kind = b.dataset.export;
+  let rows = [];
+  if (kind === 'attendance') {
+    const { data } = await sb.from('attendance').select('*').order('created_at', { ascending: false });
+    rows = (data || []).map(a => {
+      const m = MEMBERS.find(x => x.id === a.user_id);
+      const s = SESSIONS.find(x => x.id === a.session_id);
+      return { date: d8(a.created_at), member: m?.name || '', guardian_email: m?.parent_email || '',
+               session: s?.title || '', coach: s?.coach || '' };
+    });
+  } else if (kind === 'members') {
+    rows = MEMBERS.map(m => ({ name: m.name, age: m.age, guardian_email: m.parent_email,
+      guardian_approved: m.parent_approved, coins: m.coins, streak: m.streak,
+      emergency_name: m.emergency_name || '', emergency_phone: m.emergency_phone || '',
+      medical_notes: m.medical_notes || '', joined: m.created_at ? d8(m.created_at) : '' }));
+  } else if (kind === 'orders') {
+    const { data } = await sb.from('orders').select('*, shop_items(title)').order('created_at', { ascending: false });
+    rows = (data || []).map(o => {
+      const m = MEMBERS.find(x => x.id === o.user_id);
+      return { date: d8(o.created_at), code: o.code, item: o.shop_items?.title || '',
+               member: m?.name || '', paid_with: o.paid_with, value_gbp: (o.amount_pence / 100).toFixed(2),
+               status: o.status };
+    });
+  } else if (kind === 'passes') {
+    const { data } = await sb.from('passes').select('*').order('created_at', { ascending: false });
+    rows = (data || []).map(p => {
+      const m = MEMBERS.find(x => x.id === p.user_id);
+      return { week: p.week_start, member: m?.name || '', source: p.source,
+               used: p.sessions_used, total: p.sessions_total,
+               value_gbp: (p.amount_pence / 100).toFixed(2) };
+    });
+  }
+  if (!rows.length) return say('Nothing to export yet.', false);
+  download(`jiggyteenz-${kind}-${new Date().toISOString().slice(0, 10)}.csv`, toCSV(rows));
+  say('Downloaded.');
+});
+
+/* ---------------- start ---------------- */
+sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
+</script>
+</body>
+</html>
