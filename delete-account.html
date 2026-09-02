@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete my account &middot; Jiggy Teenz</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f6f7f9;color:#0d0d12;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+line-height:1.65;padding:24px 16px 60px}
+.wrap{max-width:640px;margin:0 auto}
+.head{background:#0d0d12;border-radius:22px 22px 0 0;padding:28px 30px}
+.logo{font-size:26px;font-weight:900;color:#fff;letter-spacing:-.6px}
+.logo span{color:#b8dc26}
+.tag{font-size:10.5px;letter-spacing:2.4px;color:#9aa0ad;margin-top:6px;font-weight:600}
+.card{background:#fff;border:1px solid #e6e8ec;border-top:none;border-radius:0 0 22px 22px;padding:32px 30px}
+h1{font-size:25px;margin-bottom:12px;letter-spacing:-.3px}
+h2{font-size:17px;margin:26px 0 8px}
+p,li{font-size:15px;color:#3f434e;margin-bottom:10px}
+ul{padding-left:22px;margin-bottom:12px}
+a{color:#7d9a0d;font-weight:700;text-decoration:none}
+label{display:block;font-size:12.5px;font-weight:800;color:#5b5f6b;margin:14px 0 5px;letter-spacing:.3px}
+input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid #e6e8ec;border-radius:12px;font:inherit;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#b8dc26}
+.btn{display:block;width:100%;background:#b8dc26;color:#0d0d12;font-weight:800;font-size:15px;
+padding:15px;border:none;border-radius:999px;cursor:pointer;margin-top:20px}
+.btn:hover{background:#c9f318}
+.box{background:#f6f7f9;border:1px solid #eceef2;border-radius:14px;padding:18px 20px;margin:18px 0}
+.box p:last-child{margin-bottom:0}
+.tip{background:#f5fbe4;border-color:#dcedb0}
+.foot{text-align:center;color:#9aa0ad;font-size:12.5px;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo">JIGGY<span>TEENZ</span></div>
+    <div class="tag">MOVE. CONNECT. GROW.</div>
+  </div>
+  <div class="card">
+    <h1>Delete a Jiggy Teenz account</h1>
+    <p>Members and their parents or guardians can have an account and all its data removed.
+    No reason needed, and we will not try to talk you out of it.</p>
+
+    <div class="box tip">
+      <p><strong>Quickest way &mdash; from inside the app.</strong> Open Jiggy Teenz &rarr; tap your avatar &rarr;
+      <strong>Settings</strong> &rarr; <strong>Delete my account</strong> &rarr; type DELETE.
+      It happens straight away.</p>
+    </div>
+
+    <h2>Or request it here</h2>
+    <p>Use this form if you cannot get into the app, or if you are a parent or guardian requesting
+    deletion on your child's behalf. It opens an email to us with the details filled in.</p>
+
+    <label for="who">I am</label>
+    <select id="who">
+      <option value="the member">the member</option>
+      <option value="the parent or guardian">the parent or guardian</option>
+    </select>
+
+    <label for="email">Email address on the account</label>
+    <input id="email" type="email" placeholder="name@example.com">
+
+    <label for="name">Member's name</label>
+    <input id="name" type="text" placeholder="First and last name">
+
+    <label for="note">Anything you'd like to add (optional)</label>
+    <textarea id="note" rows="3" placeholder="Optional"></textarea>
+
+    <button class="btn" id="send">REQUEST DELETION</button>
+    <p style="font-size:12.5px;color:#9aa0ad;margin-top:12px">
+      This opens your email app with the request ready to send. If nothing happens, email
+      <a href="mailto:info@jiggyteenz.co.uk">info@jiggyteenz.co.uk</a> with the details above.</p>
+
+    <h2>What gets deleted</h2>
+    <p>Everything tied to the account is removed permanently:</p>
+    <ul>
+      <li>Name, email, age and guardian email address</li>
+      <li>Emergency contact and any note left for coaches</li>
+      <li>Jiggy Coins balance and history</li>
+      <li>Bookings, attendance record and streaks</li>
+      <li>Avatar, titles and any rewards</li>
+      <li>Support messages</li>
+    </ul>
+
+    <h2>What we have to keep, and why</h2>
+    <ul>
+      <li><strong>Payment records</strong> for 6 years, because UK tax law requires it. These are reduced to
+      the amount, date and reference, and detached from the member's profile.</li>
+      <li><strong>Attendance dates</strong> for up to 3 years where needed as a safeguarding and insurance
+      record of who was present at a session. These are anonymised where we can.</li>
+    </ul>
+
+    <h2>How long it takes</h2>
+    <p>In-app deletion is immediate. Requests made through this page are actioned within
+    <strong>30 days</strong>, and usually much sooner. We will email you to confirm once it is done.</p>
+
+    <div class="box">
+      <p><strong>Just want to pause instead?</strong> You do not have to delete anything to take a break &mdash;
+      simply stop booking, and your coins and streak will be waiting.
+      Email <a href="mailto:info@jiggyteenz.co.uk">info@jiggyteenz.co.uk</a> if you would like a hand.</p>
+    </div>
+  </div>
+  <p class="foot">Jiggy Teenz &middot;
+  <a href="privacy.html">Privacy Policy</a> &middot; <a href="terms.html">Terms of Service</a></p>
+</div>
+
+<script>
+document.getElementById('send').addEventListener('click', function () {
+  var who = document.getElementById('who').value;
+  var email = (document.getElementById('email').value || '').trim();
+  var name = (document.getElementById('name').value || '').trim();
+  var note = (document.getElementById('note').value || '').trim();
+
+  if (!email || email.indexOf('@') === -1) {
+    alert('Please enter the email address on the account.');
+    return;
+  }
+
+  var body =
+    'Please delete the Jiggy Teenz account below.\n\n' +
+    'I am: ' + who + '\n' +
+    'Account email: ' + email + '\n' +
+    "Member's name: " + (name || '(not given)') + '\n' +
+    (note ? '\nNotes: ' + note + '\n' : '') +
+    '\nI understand this permanently removes the account, coins, bookings and history.\n';
+
+  window.location.href = 'mailto:info@jiggyteenz.co.uk' +
+    '?subject=' + encodeURIComponent('Account deletion request - ' + email) +
+    '&body=' + encodeURIComponent(body);
+});
+</script>
+</body>
+</html>
