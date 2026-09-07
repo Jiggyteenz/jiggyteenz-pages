@@ -114,6 +114,7 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
     <button data-tab="overview" class="on">Overview</button>
     <button data-tab="sessions">Sessions</button>
     <button data-tab="register">Register</button>
+    <button data-tab="events">Events</button>
     <button data-tab="members">Members</button>
     <button data-tab="shop">Shop</button>
     <button data-tab="orders">Orders</button>
@@ -206,10 +207,56 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
       </div>
     </section>
 
+    <!-- EVENTS -->
+    <section id="tab-events" class="hide">
+      <h1>Events &amp; socials</h1>
+      <p class="sub">Meetups and socials are staff-organised only — members can't create them.
+        You'll see everyone who has said they're coming.</p>
+
+      <div class="card">
+        <h1 style="font-size:17px" id="evFormTitle">Add an event</h1>
+        <div class="grid g2" style="margin-top:6px">
+          <div><label>Title</label><input id="eTitle" placeholder="Community Meetup"></div>
+          <div><label>Emoji</label><input id="eEmoji" value="🎉" maxlength="4"></div>
+          <div><label>Date &amp; time</label><input id="eWhen" type="datetime-local"></div>
+          <div><label>Jiggy Coins for attending</label><input id="eCoins" type="number" value="10" min="0" max="200"></div>
+          <div style="grid-column:1/-1"><label>Details</label>
+            <input id="eDetail" placeholder="Games, food, good vibes. Bring a friend!"></div>
+          <div><label>Status</label>
+            <select id="eActive"><option value="true">Visible</option><option value="false">Hidden</option></select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn" id="saveEvent">SAVE EVENT</button>
+          <button class="btn ghost hide" id="cancelEvEdit">Cancel</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <table><thead><tr><th>Event</th><th>When</th><th>Coins</th><th>Going</th><th>Status</th><th></th></tr></thead>
+          <tbody id="eventRows"></tbody></table>
+        <div id="eventsEmpty" class="empty hide">No events yet — add one above.</div>
+      </div>
+
+      <div class="card">
+        <h1 style="font-size:16px">Who's coming</h1>
+        <label>Event</label>
+        <select id="rsvpEvent" style="max-width:420px"></select>
+        <div id="rsvpRows" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card">
+        <h1 style="font-size:16px">Buddy pairings</h1>
+        <p class="sub" style="margin-bottom:10px">Who has paired up, and who is still looking.
+          Staff oversight — members never meet outside a supervised session.</p>
+        <div id="buddyRows"></div>
+      </div>
+    </section>
+
     <!-- MEMBERS -->
     <section id="tab-members" class="hide">
       <h1>Members</h1>
-      <p class="sub">Everyone signed up. Safety notes are shown to coaches only.</p>
+      <p class="sub">Everyone signed up. Safety notes are visible to staff only, so coaches can look after members properly.</p>
       <div class="card">
         <input id="memberSearch" placeholder="Search by name or email…" style="max-width:340px">
       </div>
@@ -373,7 +420,7 @@ async function boot() {
   $('whoami').textContent = me.name + (me.is_admin ? ' · admin' : ' · coach');
   $('login').style.display = 'none';
   $('app').style.display = 'block';
-  loadOverview(); loadSessions(); loadMembers(); loadShop(); loadOrders(); loadSupport(); loadTeam();
+  loadOverview(); loadSessions(); loadMembers().then(() => { loadEvents(); loadBuddies(); }); loadShop(); loadOrders(); loadSupport(); loadTeam();
 }
 
 /* ---------------- tabs ---------------- */
@@ -729,6 +776,133 @@ async function loadSupport() {
 }
 
 
+
+/* ---------------- events ---------------- */
+let EVENTS_CACHE = [], EV_EDIT = null;
+
+async function loadEvents() {
+  const { data: evs } = await sb.from('events').select('*').order('starts_at', { ascending: false });
+  EVENTS_CACHE = evs || [];
+  const { data: rs } = await sb.from('rsvps').select('event_id');
+  const counts = {};
+  (rs || []).forEach(r => counts[r.event_id] = (counts[r.event_id] || 0) + 1);
+
+  $('eventRows').innerHTML = EVENTS_CACHE.map(e => `
+    <tr>
+      <td><b>${esc(e.emoji || '')} ${esc(e.title)}</b><br><span class="small">${esc(e.detail || '')}</span></td>
+      <td>${dt(e.starts_at)}</td>
+      <td>${e.coins || 0} JC</td>
+      <td><b>${counts[e.id] || 0}</b></td>
+      <td>${e.active ? '<span class="pill ok">Visible</span>' : '<span class="pill off">Hidden</span>'}</td>
+      <td class="row">
+        <button class="btn sm ghost" data-evedit="${e.id}">Edit</button>
+        <button class="btn sm ghost" data-evtoggle="${e.id}">${e.active ? 'Hide' : 'Show'}</button>
+      </td>
+    </tr>`).join('');
+  $('eventsEmpty').classList.toggle('hide', EVENTS_CACHE.length > 0);
+
+  const sel = $('rsvpEvent'), keep = sel.value;
+  sel.innerHTML = EVENTS_CACHE.map(e => `<option value="${e.id}">${esc(e.title)} — ${dt(e.starts_at)}</option>`).join('');
+  if (keep) sel.value = keep;
+  loadRsvps();
+
+  document.querySelectorAll('[data-evedit]').forEach(b => b.onclick = () => {
+    const e = EVENTS_CACHE.find(x => x.id === b.dataset.evedit);
+    EV_EDIT = e.id;
+    $('evFormTitle').textContent = 'Edit event';
+    $('eTitle').value = e.title; $('eEmoji').value = e.emoji || '🎉';
+    $('eDetail').value = e.detail || ''; $('eCoins').value = e.coins || 0;
+    const d = new Date(e.starts_at); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    $('eWhen').value = d.toISOString().slice(0, 16);
+    $('eActive').value = String(e.active);
+    $('cancelEvEdit').classList.remove('hide');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.querySelectorAll('[data-evtoggle]').forEach(b => b.onclick = async () => {
+    const e = EVENTS_CACHE.find(x => x.id === b.dataset.evtoggle);
+    await sb.from('events').update({ active: !e.active }).eq('id', e.id);
+    say(e.active ? 'Event hidden.' : 'Event is live.');
+    loadEvents();
+  });
+}
+
+$('cancelEvEdit').onclick = () => {
+  EV_EDIT = null;
+  $('evFormTitle').textContent = 'Add an event';
+  ['eTitle','eDetail','eWhen'].forEach(i => $(i).value = '');
+  $('cancelEvEdit').classList.add('hide');
+};
+
+$('saveEvent').onclick = async () => {
+  const title = $('eTitle').value.trim();
+  const when = $('eWhen').value;
+  if (!title) return say('Give the event a title.', false);
+  if (!when) return say('Pick a date and time.', false);
+  const row = {
+    title, emoji: $('eEmoji').value.trim() || '🎉',
+    detail: $('eDetail').value.trim(),
+    starts_at: new Date(when).toISOString(),
+    coins: Math.max(0, Math.min(200, +$('eCoins').value || 0)),
+    active: $('eActive').value === 'true',
+  };
+  const { error } = EV_EDIT
+    ? await sb.from('events').update(row).eq('id', EV_EDIT)
+    : await sb.from('events').insert(row);
+  if (error) return say(error.message, false);
+  say(EV_EDIT ? 'Event updated.' : 'Event added.');
+  $('cancelEvEdit').click();
+  loadEvents();
+};
+
+$('rsvpEvent').onchange = loadRsvps;
+async function loadRsvps() {
+  const id = $('rsvpEvent').value;
+  if (!id) { $('rsvpRows').innerHTML = '<div class="small">No events yet.</div>'; return; }
+  const { data } = await sb.from('rsvps').select('user_id').eq('event_id', id);
+  const ids = (data || []).map(r => r.user_id);
+  const rows = MEMBERS.filter(m => ids.includes(m.id));
+  $('rsvpRows').innerHTML = rows.length
+    ? `<div class="small" style="margin-bottom:8px"><b>${rows.length}</b> attending</div>` + rows.map(m => `
+        <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+          <b>${esc(m.name || '—')}</b>
+          <span class="small">${m.parent_approved ? '' : '<span class="pill warn">guardian pending</span>'}</span>
+          <span class="small right">${esc(m.parent_email || '')}</span>
+        </div>`).join('')
+    : '<div class="small">Nobody has said they are coming yet.</div>';
+}
+
+async function loadBuddies() {
+  const { data } = await sb.from('profiles').select('id,name,buddy_of,buddy_status,buddy_note');
+  const all = data || [];
+  const byId = {}; all.forEach(p => byId[p.id] = p);
+  const paired = all.filter(p => p.buddy_of);
+  const seen = new Set();
+  const pairs = [];
+  paired.forEach(p => {
+    const key = [p.id, p.buddy_of].sort().join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    pairs.push([p, byId[p.buddy_of]]);
+  });
+  const looking = all.filter(p => p.buddy_status === 'looking' || p.buddy_status === 'offering');
+
+  $('buddyRows').innerHTML =
+    (pairs.length
+      ? '<div class="small" style="margin-bottom:8px"><b>Paired</b></div>' + pairs.map(([a, b]) => `
+          <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+            🤝 <b>${esc(a.name || '—')}</b> &amp; <b>${esc(b ? b.name : '—')}</b>
+          </div>`).join('')
+      : '<div class="small">No pairings yet.</div>') +
+    (looking.length
+      ? '<div class="small" style="margin:14px 0 8px"><b>On the board</b></div>' + looking.map(p => `
+          <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+            ${p.buddy_status === 'offering' ? '💪' : '🙋'} <b>${esc(p.name || '—')}</b>
+            <span class="small">${p.buddy_status === 'offering' ? 'happy to be a buddy' : 'looking for a buddy'}</span>
+            <span class="small right">${esc(p.buddy_note || '')}</span>
+          </div>`).join('')
+      : '');
+}
+
 /* ---------------- team ---------------- */
 async function loadTeam() {
   const { data } = await sb.rpc('staff_team');
@@ -819,7 +993,7 @@ document.querySelectorAll('[data-export]').forEach(b => b.onclick = async () => 
     rows = MEMBERS.map(m => ({ name: m.name, age: m.age, guardian_email: m.parent_email,
       guardian_approved: m.parent_approved, coins: m.coins, streak: m.streak,
       emergency_name: m.emergency_name || '', emergency_phone: m.emergency_phone || '',
-      medical_notes: m.medical_notes || '', joined: m.created_at ? d8(m.created_at) : '' }));
+      safety_note: m.medical_notes || '', joined: m.created_at ? d8(m.created_at) : '' }));
   } else if (kind === 'orders') {
     const { data } = await sb.from('orders').select('*, shop_items(title)').order('created_at', { ascending: false });
     rows = (data || []).map(o => {
