@@ -118,6 +118,7 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
     <button data-tab="members">Members</button>
     <button data-tab="shop">Shop</button>
     <button data-tab="orders">Orders</button>
+    <button data-tab="payments">Payments</button>
     <button data-tab="support">Support</button>
     <button data-tab="team">Team</button>
     <button data-tab="export">Export</button>
@@ -306,6 +307,28 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
       </div>
     </section>
 
+    <!-- PAYMENTS -->
+    <section id="tab-payments" class="hide">
+      <h1>Payments</h1>
+      <p class="sub">Every card payment attempt. "Pending" means they started but didn't finish —
+        usually an abandoned checkout or a declined card. Nothing was charged.</p>
+      <div class="grid g4" id="payStats"></div>
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <select id="payFilter" style="max-width:220px">
+            <option value="all">All payments</option>
+            <option value="paid">Paid only</option>
+            <option value="pending">Pending / failed only</option>
+          </select>
+          <button class="btn sm ghost right" id="refreshPay">Refresh</button>
+        </div>
+        <table><thead><tr>
+          <th>When</th><th>Member</th><th>For</th><th>Amount</th><th>Status</th>
+        </tr></thead><tbody id="payRows"></tbody></table>
+        <div id="payEmpty" class="empty hide">No card payments yet.</div>
+      </div>
+    </section>
+
     <!-- SUPPORT -->
     <section id="tab-support" class="hide">
       <h1>Support inbox</h1>
@@ -342,6 +365,27 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
           <tbody id="teamRows"></tbody></table>
         <div id="teamEmpty" class="empty hide">No staff yet.</div>
       </div>
+
+      <div class="card">
+        <h1 style="font-size:17px">My password</h1>
+        <p class="sub" style="margin-bottom:6px">Change the password for the account you're signed in with.</p>
+        <div class="grid g2">
+          <div><label>New password (6+ characters)</label>
+            <input id="newPw" type="password" placeholder="••••••••"></div>
+          <div><label>Repeat it</label>
+            <input id="newPw2" type="password" placeholder="••••••••"></div>
+        </div>
+        <button class="btn" id="changePw" style="margin-top:16px">CHANGE MY PASSWORD</button>
+      </div>
+
+      <div class="card">
+        <h1 style="font-size:17px">Forgotten password</h1>
+        <p class="sub" style="margin-bottom:6px">Send a reset link to any staff member (or yourself).</p>
+        <div class="row">
+          <input id="resetEmail" type="email" placeholder="their@email.com" style="max-width:320px">
+          <button class="btn ghost" id="sendReset">SEND RESET LINK</button>
+        </div>
+      </div>
     </section>
 
     <!-- EXPORT -->
@@ -358,6 +402,9 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
         <div class="card"><b>Orders</b>
           <p class="small" style="margin:8px 0 14px">Merch and perks bought, with collection codes.</p>
           <button class="btn" data-export="orders">DOWNLOAD</button></div>
+        <div class="card"><b>Payments</b>
+          <p class="small" style="margin:8px 0 14px">Every card payment with status and amount.</p>
+          <button class="btn" data-export="payments">DOWNLOAD</button></div>
         <div class="card"><b>Passes sold</b>
           <p class="small" style="margin:8px 0 14px">Weekly passes with how they were paid for.</p>
           <button class="btn" data-export="passes">DOWNLOAD</button></div>
@@ -420,7 +467,7 @@ async function boot() {
   $('whoami').textContent = me.name + (me.is_admin ? ' · admin' : ' · coach');
   $('login').style.display = 'none';
   $('app').style.display = 'block';
-  loadOverview(); loadSessions(); loadMembers().then(() => { loadEvents(); loadBuddies(); }); loadShop(); loadOrders(); loadSupport(); loadTeam();
+  loadOverview(); loadSessions(); loadMembers().then(() => { loadEvents(); loadBuddies(); }); loadShop(); loadOrders(); loadSupport(); loadTeam(); loadPayments();
 }
 
 /* ---------------- tabs ---------------- */
@@ -961,6 +1008,76 @@ $('inviteBtn').onclick = async () => {
   $('inviteBtn').textContent = 'SEND INVITE';
 };
 
+
+/* ---------------- payments ---------------- */
+let PAYMENTS = [];
+async function loadPayments() {
+  const { data } = await sb.from('payments').select('*').order('created_at', { ascending: false }).limit(300);
+  PAYMENTS = data || [];
+  renderPayments();
+
+  const paid = PAYMENTS.filter(p => p.status === 'paid');
+  const pending = PAYMENTS.filter(p => p.status !== 'paid');
+  const total = paid.reduce((s, p) => s + (p.amount_pence || 0), 0);
+  const week = paid.filter(p => Date.now() - new Date(p.created_at) < 7 * 864e5)
+                   .reduce((s, p) => s + (p.amount_pence || 0), 0);
+  $('payStats').innerHTML = [
+    ['Taken all-time', '£' + (total / 100).toFixed(2), 'var(--green)'],
+    ['Taken this week', '£' + (week / 100).toFixed(2), 'var(--ink)'],
+    ['Successful', paid.length, 'var(--limeDark)'],
+    ['Not completed', pending.length, pending.length ? 'var(--orange)' : 'var(--ink3)'],
+  ].map(([l, v, c]) => `<div class="stat"><b style="color:${c}">${v}</b><span>${l}</span></div>`).join('');
+}
+
+function renderPayments() {
+  const f = $('payFilter').value;
+  const rows = PAYMENTS.filter(p =>
+    f === 'all' ? true : f === 'paid' ? p.status === 'paid' : p.status !== 'paid');
+
+  $('payRows').innerHTML = rows.map(p => {
+    const m = MEMBERS.find(x => x.id === p.user_id);
+    const kind = p.kind === 'pass' ? '🎟️ Weekly pass'
+               : p.kind === 'coins' ? '🪙 Coin bundle'
+               : '🛍️ Merch';
+    const badge = p.status === 'paid'
+      ? '<span class="pill ok">Paid</span>'
+      : '<span class="pill warn">Not completed</span>';
+    return `<tr>
+      <td class="small">${d8(p.created_at)}<br>${new Date(p.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td class="small">${esc(m ? m.name : '—')}</td>
+      <td>${kind}</td>
+      <td><b>£${((p.amount_pence || 0) / 100).toFixed(2)}</b></td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+  $('payEmpty').classList.toggle('hide', rows.length > 0);
+}
+
+$('payFilter').onchange = renderPayments;
+$('refreshPay').onclick = () => { loadPayments(); say('Refreshed.'); };
+
+/* ---------------- staff passwords ---------------- */
+$('changePw').onclick = async () => {
+  const a = $('newPw').value, b = $('newPw2').value;
+  if (a.length < 6) return say('Password needs at least 6 characters.', false);
+  if (a !== b) return say('The two passwords do not match.', false);
+  const { error } = await sb.auth.updateUser({ password: a });
+  if (error) return say(error.message, false);
+  $('newPw').value = ''; $('newPw2').value = '';
+  say('Password changed. Use it next time you sign in.');
+};
+
+$('sendReset').onclick = async () => {
+  const em = ($('resetEmail').value || '').trim();
+  if (!/^\S+@\S+\.\S+$/.test(em)) return say('Enter a valid email address.', false);
+  const { error } = await sb.auth.resetPasswordForEmail(em, {
+    redirectTo: 'https://jiggyteenz.github.io/jiggyteenz-pages/admin.html',
+  });
+  if (error) return say(error.message, false);
+  $('resetEmail').value = '';
+  say('Reset link sent to ' + em + '.');
+};
+
 /* ---------------- export ---------------- */
 function toCSV(rows) {
   if (!rows.length) return '';
@@ -1001,6 +1118,12 @@ document.querySelectorAll('[data-export]').forEach(b => b.onclick = async () => 
       return { date: d8(o.created_at), code: o.code, item: o.shop_items?.title || '',
                member: m?.name || '', paid_with: o.paid_with, value_gbp: (o.amount_pence / 100).toFixed(2),
                status: o.status };
+    });
+  } else if (kind === 'payments') {
+    rows = PAYMENTS.map(p => {
+      const m = MEMBERS.find(x => x.id === p.user_id);
+      return { date: d8(p.created_at), member: m ? m.name : '', type: p.kind,
+               amount_gbp: ((p.amount_pence || 0) / 100).toFixed(2), status: p.status };
     });
   } else if (kind === 'passes') {
     const { data } = await sb.from('passes').select('*').order('created_at', { ascending: false });
