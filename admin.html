@@ -118,6 +118,7 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
     <button data-tab="members">Members</button>
     <button data-tab="shop">Shop</button>
     <button data-tab="orders">Orders</button>
+    <button data-tab="wellbeing">Wellbeing</button>
     <button data-tab="payments">Payments</button>
     <button data-tab="support">Support</button>
     <button data-tab="team">Team</button>
@@ -196,6 +197,15 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
         <div id="waitRows"></div>
       </div>
       <div class="card">
+        <h1 style="font-size:16px">Coach notes</h1>
+        <p class="sub" style="margin-bottom:10px">How the session went — what worked, who to keep an eye on.
+          Staff only; members never see these.</p>
+        <textarea id="noteText" rows="3" placeholder="e.g. Good energy. Maya struggled with the sled - lighter next week."></textarea>
+        <button class="btn sm" id="addNote" style="margin-top:10px">SAVE NOTE</button>
+        <div id="noteRows" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card">
         <h1 style="font-size:16px">Session materials</h1>
         <p class="sub" style="margin-bottom:10px">Files here are visible only to members booked on this session.
           Max 10&nbsp;MB. PDF, images, video, Word or PowerPoint.</p>
@@ -263,7 +273,7 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
       </div>
       <div class="card">
         <table><thead><tr>
-          <th>Member</th><th>Age</th><th>Guardian</th><th>Coins</th><th>Streak</th><th>Pass</th><th>Joined</th>
+          <th>Member</th><th>Email</th><th>Age</th><th>Guardian</th><th>Coins</th><th>Sessions</th><th>Pass</th><th>Joined</th>
         </tr></thead><tbody id="memberRows"></tbody></table>
         <div id="membersEmpty" class="empty hide">No members yet.</div>
       </div>
@@ -304,6 +314,44 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
           <th>Code</th><th>Item</th><th>Member</th><th>Paid with</th><th>When</th><th>Status</th><th></th>
         </tr></thead><tbody id="orderRows"></tbody></table>
         <div id="ordersEmpty" class="empty hide">No orders yet.</div>
+      </div>
+    </section>
+
+    <!-- WELLBEING -->
+    <section id="tab-wellbeing" class="hide">
+      <h1>Wellbeing &amp; safeguarding</h1>
+      <p class="sub">Concerns raised by coaches about a member. <b>Admins only</b> — coaches can raise
+        a flag but cannot read this list. Handle every entry through your safeguarding procedure.</p>
+
+      <div class="card" style="border-color:#fde68a;background:#fffbeb">
+        <p class="small" style="color:#92400e">
+          <b>This is not a replacement for your safeguarding process.</b> If a young person is at
+          immediate risk, follow your policy and contact the relevant authorities. This log exists so
+          concerns are recorded and not forgotten.</p>
+      </div>
+
+      <div class="card">
+        <h1 style="font-size:17px">Raise a concern</h1>
+        <div class="grid g2" style="margin-top:6px">
+          <div><label>Member</label><select id="wMember"></select></div>
+          <div><label>Session (optional)</label><select id="wSession"></select></div>
+        </div>
+        <label>What did you notice?</label>
+        <textarea id="wConcern" rows="3" placeholder="Factual and brief — what you observed, not conclusions."></textarea>
+        <button class="btn" id="raiseFlag" style="margin-top:14px">RECORD CONCERN</button>
+      </div>
+
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <b>Concerns raised</b>
+          <select id="wFilter" class="right" style="max-width:180px">
+            <option value="open">Open</option>
+            <option value="monitoring">Monitoring</option>
+            <option value="closed">Closed</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div id="wRows"></div>
       </div>
     </section>
 
@@ -467,7 +515,7 @@ async function boot() {
   $('whoami').textContent = me.name + (me.is_admin ? ' · admin' : ' · coach');
   $('login').style.display = 'none';
   $('app').style.display = 'block';
-  loadOverview(); loadSessions(); loadMembers().then(() => { loadEvents(); loadBuddies(); }); loadShop(); loadOrders(); loadSupport(); loadTeam(); loadPayments();
+  loadOverview(); loadSessions(); loadMembers().then(() => { loadEvents(); loadBuddies(); }); loadShop(); loadOrders(); loadSupport(); loadTeam(); loadPayments(); loadWellbeing();
 }
 
 /* ---------------- tabs ---------------- */
@@ -638,6 +686,7 @@ async function loadRegister() {
     : '<div class="small">Nobody waiting.</div>';
 
   loadMaterials(id);
+  loadNotes(id);
 }
 
 /* ---------------- materials ---------------- */
@@ -690,8 +739,14 @@ $('uploadMat').onclick = async () => {
 
 /* ---------------- members ---------------- */
 async function loadMembers() {
-  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
-  MEMBERS = data || [];
+  const { data: r } = await sb.rpc('staff_members');
+  MEMBERS = (r && r.members) ? r.members.map(m => ({
+    ...m,
+    parent_email: m.guardian_email,
+    parent_approved: m.guardian_approved,
+    medical_notes: m.safety_note,
+    created_at: m.joined,
+  })) : [];
   const { data: passes } = await sb.from('passes').select('user_id,sessions_used,sessions_total,week_start');
   const pmap = {};
   (passes || []).forEach(p => { pmap[p.user_id] = p; });
@@ -702,17 +757,20 @@ async function loadMembers() {
 function renderMembers(pmap) {
   const q = ($('memberSearch').value || '').toLowerCase();
   const rows = MEMBERS.filter(m =>
-    !q || (m.name || '').toLowerCase().includes(q) || (m.parent_email || '').toLowerCase().includes(q));
+    !q || (m.name || '').toLowerCase().includes(q)
+       || (m.email || '').toLowerCase().includes(q)
+       || (m.parent_email || '').toLowerCase().includes(q));
   $('memberRows').innerHTML = rows.map(m => {
     const p = pmap[m.id];
     return `<tr>
       <td><b>${esc(m.name || '—')}</b> ${m.is_admin ? '<span class="pill ok">admin</span>' : m.is_coach ? '<span class="pill ok">coach</span>' : ''}
         <br><span class="small">${esc(m.avatar_emoji || '')} ${esc(m.title_badge || '')}</span></td>
+      <td class="small"><a href="mailto:${esc(m.email || '')}">${esc(m.email || '—')}</a></td>
       <td>${m.age ?? '—'}</td>
       <td class="small">${esc(m.parent_email || '—')}<br>
         ${m.parent_approved ? '<span class="pill ok">Approved</span>' : '<span class="pill warn">Pending</span>'}</td>
       <td><b>${m.coins ?? 0}</b><br><span class="small">${gbp(m.coins)}</span></td>
-      <td>${m.streak ?? 0}</td>
+      <td>${m.sessions ?? 0} 🏋️<br><span class="small">${m.streak ?? 0} streak</span></td>
       <td class="small">${p ? `${p.sessions_total - p.sessions_used} left` : '—'}</td>
       <td class="small">${m.created_at ? d8(m.created_at) : '—'}</td>
     </tr>`;
@@ -823,6 +881,96 @@ async function loadSupport() {
 }
 
 
+
+
+/* ---------------- wellbeing ---------------- */
+let FLAGS = [];
+async function loadWellbeing() {
+  if (!ME || !ME.is_admin) {
+    $('wRows').innerHTML = '<div class="small">Admins only.</div>';
+    return;
+  }
+  const { data } = await sb.rpc('wellbeing_list');
+  FLAGS = (data && data.flags) || [];
+  renderFlags();
+
+  $('wMember').innerHTML = MEMBERS.filter(m => !m.is_admin && !m.is_coach)
+    .map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  $('wSession').innerHTML = '<option value="">— none —</option>' +
+    SESSIONS.map(s => `<option value="${s.id}">${esc(s.title)} · ${dt(s.starts_at)}</option>`).join('');
+}
+
+function renderFlags() {
+  const f = $('wFilter').value;
+  const rows = FLAGS.filter(x => f === 'all' ? true : x.status === f);
+  $('wRows').innerHTML = rows.length ? rows.map(x => `
+    <details ${x.status === 'open' ? 'open' : ''}>
+      <summary>${x.status === 'open' ? '🔴' : x.status === 'monitoring' ? '🟠' : '✅'}
+        ${esc(x.member)} <span class="small">· raised by ${esc(x.raised_by)} · ${d8(x.created_at)}</span></summary>
+      <p style="margin:12px 0;line-height:1.6">${esc(x.concern)}</p>
+      ${x.action ? `<p class="small"><b>Action taken:</b> ${esc(x.action)}</p>` : ''}
+      <label>Action / outcome</label>
+      <textarea rows="2" data-action="${x.id}">${esc(x.action || '')}</textarea>
+      <div class="row" style="margin-top:10px">
+        <select data-status="${x.id}" style="max-width:170px">
+          <option value="open" ${x.status==='open'?'selected':''}>Open</option>
+          <option value="monitoring" ${x.status==='monitoring'?'selected':''}>Monitoring</option>
+          <option value="closed" ${x.status==='closed'?'selected':''}>Closed</option>
+        </select>
+        <button class="btn sm" data-savew="${x.id}">Save</button>
+        ${x.guardian_email ? `<a class="btn sm ghost" href="mailto:${esc(x.guardian_email)}">Email guardian</a>` : ''}
+      </div>
+    </details>`).join('') : '<div class="small">Nothing recorded.</div>';
+
+  document.querySelectorAll('[data-savew]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.savew;
+    const status = document.querySelector(`[data-status="${id}"]`).value;
+    const action = document.querySelector(`[data-action="${id}"]`).value;
+    const { error } = await sb.rpc('update_wellbeing_flag',
+      { p_id: id, p_status: status, p_action: action });
+    say(error ? error.message : 'Updated.', !error);
+    loadWellbeing();
+  });
+}
+$('wFilter').onchange = renderFlags;
+
+$('raiseFlag').onclick = async () => {
+  const member = $('wMember').value;
+  const session = $('wSession').value || null;
+  const concern = $('wConcern').value.trim();
+  if (!member) return say('Pick a member.', false);
+  if (concern.length < 5) return say('Please describe the concern.', false);
+  const { data, error } = await sb.rpc('raise_wellbeing_flag',
+    { p_member: member, p_session: session, p_concern: concern });
+  if (error) return say(error.message, false);
+  say((data && data.message) || 'Recorded.');
+  $('wConcern').value = '';
+  loadWellbeing();
+};
+
+/* ---------------- coach notes ---------------- */
+async function loadNotes(sessionId) {
+  const { data } = await sb.from('session_notes').select('*')
+    .eq('session_id', sessionId).order('created_at', { ascending: false });
+  $('noteRows').innerHTML = (data || []).length ? (data || []).map(n => {
+    const a = MEMBERS.find(m => m.id === n.author_id);
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--line)">
+      <div class="small"><b>${esc(a ? a.name : 'Staff')}</b> · ${d8(n.created_at)}</div>
+      <div style="margin-top:4px">${esc(n.note)}</div></div>`;
+  }).join('') : '<div class="small">No notes for this session yet.</div>';
+}
+
+$('addNote').onclick = async () => {
+  const id = $('regSession').value;
+  const note = $('noteText').value.trim();
+  if (!id) return say('Pick a session first.', false);
+  if (note.length < 2) return say('Nothing to save.', false);
+  const { error } = await sb.rpc('add_session_note', { p_session: id, p_note: note });
+  if (error) return say(error.message, false);
+  say('Note saved.');
+  $('noteText').value = '';
+  loadNotes(id);
+};
 
 /* ---------------- events ---------------- */
 let EVENTS_CACHE = [], EV_EDIT = null;
@@ -1103,34 +1251,52 @@ document.querySelectorAll('[data-export]').forEach(b => b.onclick = async () => 
     rows = (data || []).map(a => {
       const m = MEMBERS.find(x => x.id === a.user_id);
       const s = SESSIONS.find(x => x.id === a.session_id);
-      return { date: d8(a.created_at), member: m?.name || '', guardian_email: m?.parent_email || '',
+      return { date: d8(a.created_at),
+               time: new Date(a.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+               member: m?.name || '', email: m?.email || '',
+               guardian_email: m?.parent_email || '',
                session: s?.title || '', coach: s?.coach || '' };
     });
   } else if (kind === 'members') {
-    rows = MEMBERS.map(m => ({ name: m.name, age: m.age, guardian_email: m.parent_email,
-      guardian_approved: m.parent_approved, coins: m.coins, streak: m.streak,
-      emergency_name: m.emergency_name || '', emergency_phone: m.emergency_phone || '',
-      safety_note: m.medical_notes || '', joined: m.created_at ? d8(m.created_at) : '' }));
+    rows = MEMBERS.map(m => ({
+      name: m.name,
+      email: m.email || '',
+      age: m.age,
+      guardian_email: m.parent_email || '',
+      guardian_approved: m.parent_approved,
+      coins: m.coins,
+      value_gbp: ((m.coins || 0) / 10).toFixed(2),
+      sessions_attended: m.sessions || 0,
+      streak: m.streak,
+      emergency_name: m.emergency_name || '',
+      emergency_phone: m.emergency_phone || '',
+      safety_note: m.medical_notes || '',
+      buddy_status: m.buddy_status || '',
+      role: m.is_admin ? 'admin' : m.is_coach ? 'coach' : 'member',
+      joined: m.created_at ? d8(m.created_at) : '',
+      last_seen: m.last_seen ? d8(m.last_seen) : 'never',
+    }));
   } else if (kind === 'orders') {
     const { data } = await sb.from('orders').select('*, shop_items(title)').order('created_at', { ascending: false });
     rows = (data || []).map(o => {
       const m = MEMBERS.find(x => x.id === o.user_id);
       return { date: d8(o.created_at), code: o.code, item: o.shop_items?.title || '',
-               member: m?.name || '', paid_with: o.paid_with, value_gbp: (o.amount_pence / 100).toFixed(2),
+               member: m?.name || '', email: m?.email || '',
+               paid_with: o.paid_with, value_gbp: (o.amount_pence / 100).toFixed(2),
                status: o.status };
     });
   } else if (kind === 'payments') {
     rows = PAYMENTS.map(p => {
       const m = MEMBERS.find(x => x.id === p.user_id);
-      return { date: d8(p.created_at), member: m ? m.name : '', type: p.kind,
-               amount_gbp: ((p.amount_pence || 0) / 100).toFixed(2), status: p.status };
+      return { date: d8(p.created_at), member: m ? m.name : '', email: m ? (m.email || '') : '',
+               type: p.kind, amount_gbp: ((p.amount_pence || 0) / 100).toFixed(2), status: p.status };
     });
   } else if (kind === 'passes') {
     const { data } = await sb.from('passes').select('*').order('created_at', { ascending: false });
     rows = (data || []).map(p => {
       const m = MEMBERS.find(x => x.id === p.user_id);
-      return { week: p.week_start, member: m?.name || '', source: p.source,
-               used: p.sessions_used, total: p.sessions_total,
+      return { week: p.week_start, member: m?.name || '', email: m?.email || '',
+               source: p.source, used: p.sessions_used, total: p.sessions_total,
                value_gbp: (p.amount_pence / 100).toFixed(2) };
     });
   }
