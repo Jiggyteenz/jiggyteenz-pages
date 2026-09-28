@@ -549,6 +549,10 @@ async function loadOverview() {
 /* ---------------- sessions ---------------- */
 async function loadSessions() {
   const { data: ses } = await sb.from('sessions').select('*').order('starts_at', { ascending: false });
+  // check-in codes now live in a staff-only table; attach them for display
+  const { data: codeRes } = await sb.rpc('staff_session_codes');
+  const CODES = (codeRes && codeRes.codes) || {};
+  (ses || []).forEach(s => { s.checkin_code = CODES[s.id] || null; });
   SESSIONS = ses || [];
   const { data: bk } = await sb.from('bookings').select('session_id');
   const counts = {};
