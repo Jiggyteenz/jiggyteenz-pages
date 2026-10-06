@@ -158,6 +158,12 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
           <div><label>Status</label>
             <select id="sActive"><option value="true">Active</option><option value="false">Hidden</option></select>
           </div>
+          <div style="grid-column:1/-1">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none">
+              <input id="sRepeat" type="checkbox" style="width:20px;height:20px;margin:0">
+              <span><b>🔁 Repeat every week</b> — same day &amp; time. Next weeks are added automatically each night (2 weeks ahead), each with its own check-in code.</span>
+            </label>
+          </div>
         </div>
         <div class="row" style="margin-top:16px">
           <button class="btn" id="saveSession">SAVE SESSION</button>
@@ -564,7 +570,7 @@ async function loadSessions() {
       <td>${dt(s.starts_at)}<br><span class="small">${s.duration_min} min</span></td>
       <td><span class="code">${esc(s.checkin_code || '—')}</span></td>
       <td>${counts[s.id] || 0} / ${s.spots}</td>
-      <td>${s.active ? '<span class="pill ok">Active</span>' : '<span class="pill off">Hidden</span>'}</td>
+      <td>${s.active ? '<span class="pill ok">Active</span>' : '<span class="pill off">Hidden</span>'}${s.repeat_weekly ? '<br><span class="pill warn" style="margin-top:4px">🔁 Weekly</span>' : ''}</td>
       <td class="row">
         <button class="btn sm ghost" data-edit="${s.id}">Edit</button>
         <button class="btn sm ghost" data-toggle="${s.id}">${s.active ? 'Hide' : 'Show'}</button>
@@ -608,6 +614,7 @@ function editSession(id) {
   $('sWhen').value = d.toISOString().slice(0, 16);
   $('sMins').value = s.duration_min; $('sSpots').value = s.spots;
   $('sCode').value = s.checkin_code || ''; $('sActive').value = String(s.active);
+  $('sRepeat').checked = !!s.repeat_weekly;
   $('cancelEdit').classList.remove('hide');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -615,6 +622,7 @@ $('cancelEdit').onclick = () => {
   EDIT_ID = null;
   $('sessFormTitle').textContent = 'Add a session';
   ['sTitle','sCoach','sWhen','sCode'].forEach(i => $(i).value = '');
+  $('sRepeat').checked = false;
   $('cancelEdit').classList.add('hide');
 };
 
@@ -634,12 +642,18 @@ $('saveSession').onclick = async () => {
     spots: Math.max(1, Math.min(200, +$('sSpots').value || 16)),
     checkin_code: code,
     active: $('sActive').value === 'true',
+    repeat_weekly: $('sRepeat').checked,
   };
+  const before = EDIT_ID ? SESSIONS.find(x => x.id === EDIT_ID) : null;
   const { error } = EDIT_ID
     ? await sb.from('sessions').update(row).eq('id', EDIT_ID)
     : await sb.from('sessions').insert(row);
   if (error) return say(error.message, false);
-  say(EDIT_ID ? 'Session updated.' : 'Session added.');
+  // Unticking "repeat" stops the whole series (future copies stay; hide any you don't want)
+  if (before && before.series_id && before.repeat_weekly && !row.repeat_weekly) {
+    await sb.from('sessions').update({ repeat_weekly: false }).eq('series_id', before.series_id);
+  }
+  say(EDIT_ID ? 'Session updated.' : (row.repeat_weekly ? 'Session added — it will repeat every week.' : 'Session added.'));
   $('cancelEdit').click();
   loadSessions(); loadOverview();
 };
