@@ -173,6 +173,11 @@ summary{cursor:pointer;font-weight:700;font-size:14px}
       </div>
 
       <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn sm" id="showUpcoming">Upcoming</button>
+          <button class="btn sm ghost" id="showPast">Past</button>
+          <span class="small right" id="sessCount"></span>
+        </div>
         <table><thead><tr>
           <th>Session</th><th>When</th><th>Code</th><th>Booked</th><th>Status</th><th></th>
         </tr></thead><tbody id="sessionRows"></tbody></table>
@@ -553,6 +558,9 @@ async function loadOverview() {
 }
 
 /* ---------------- sessions ---------------- */
+let SESS_VIEW = 'upcoming';
+$('showUpcoming').onclick = () => { SESS_VIEW = 'upcoming'; loadSessions(); };
+$('showPast').onclick = () => { SESS_VIEW = 'past'; loadSessions(); };
 async function loadSessions() {
   const { data: ses } = await sb.from('sessions').select('*').order('starts_at', { ascending: false });
   // check-in codes now live in a staff-only table; attach them for display
@@ -564,7 +572,15 @@ async function loadSessions() {
   const counts = {};
   (bk || []).forEach(b => counts[b.session_id] = (counts[b.session_id] || 0) + 1);
 
-  $('sessionRows').innerHTML = SESSIONS.map(s => `
+  // Upcoming = not finished yet (soonest first). Past = finished (most recent first).
+  const ended = (s) => new Date(s.starts_at).getTime() + (s.duration_min || 60) * 60000 < Date.now();
+  const LIST = SESS_VIEW === 'past'
+    ? SESSIONS.filter(ended)
+    : SESSIONS.filter(s => !ended(s)).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+  $('showUpcoming').className = 'btn sm' + (SESS_VIEW === 'past' ? ' ghost' : '');
+  $('showPast').className = 'btn sm' + (SESS_VIEW === 'past' ? '' : ' ghost');
+  $('sessCount').textContent = LIST.length + (SESS_VIEW === 'past' ? ' past' : ' upcoming') + ' session' + (LIST.length === 1 ? '' : 's');
+  $('sessionRows').innerHTML = LIST.map(s => `
     <tr>
       <td><b>${esc(s.emoji || '')} ${esc(s.title)}</b><br><span class="small">${esc(s.coach || '')}</span></td>
       <td>${dt(s.starts_at)}<br><span class="small">${s.duration_min} min</span></td>
@@ -576,7 +592,8 @@ async function loadSessions() {
         <button class="btn sm ghost" data-toggle="${s.id}">${s.active ? 'Hide' : 'Show'}</button>
       </td>
     </tr>`).join('');
-  $('sessionsEmpty').classList.toggle('hide', SESSIONS.length > 0);
+  $('sessionsEmpty').classList.toggle('hide', LIST.length > 0);
+  $('sessionsEmpty').textContent = SESS_VIEW === 'past' ? 'No past sessions yet.' : 'No upcoming sessions — add one above.';
 
   const soon = SESSIONS.filter(s => s.active && new Date(s.starts_at) > Date.now() - 6 * 3600e3)
     .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)).slice(0, 5);
